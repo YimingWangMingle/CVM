@@ -18,8 +18,21 @@ Efficient exploration remains a key challenge in deep reinforcement learning, es
 
 ## Experimental Results
 
-We evaluate CVM across realistic embodied environments, specifically assessing exploration efficiency, robustness, and scalability in navigation tasks.
+### Visualization Results
 
+#### Demos in Go2 Environment
+
+![Performance 1](./figs/real_world_easy.gif)
+![Performance 2](./figs/real_world_medium.gif)
+![Performance 3](./figs/real_world_hard.gif)
+
+#### Demos on Robotic
+![CVM Performance 1](./figs/1.gif)
+![CVM Performance 2](./figs/2.gif)
+![CVM Performance 3](./figs/3.gif)
+
+
+We evaluate CVM across realistic embodied environments, specifically assessing exploration efficiency, robustness, and scalability in navigation tasks.
 ### Environments
 Experiments are conducted using the **Unitree Go2 quadruped robot** in realistic indoor environments (Habitat):
 *   **(a) 1F6R-easy**: 1 Floor, 6 Rooms
