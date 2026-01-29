@@ -9,6 +9,7 @@ from cvm.agent import CVMAgent
 from cvm.buffer import CVMReplayBuffer
 
 ACTION_MAP = {0: "move_forward", 1: "turn_left", 2: "turn_right"}
+
 class VisualEncoder(nn.Module):
     def __init__(self, output_dim: int = 256):
         super().__init__()
@@ -52,13 +53,15 @@ def make_cfg(scene_path: str,
     }
     return habitat_sim.Configuration(sim_cfg, [agent_cfg])
 
-
 def bgr(img):    
     return img[..., [2, 1, 0]]
+
 def euclid(a, b):
     return np.linalg.norm(np.asarray(a) - np.asarray(b))
+
 def sample_goal(sim):
     return sim.pathfinder.get_random_navigable_point()
+
 def log(msg: str):
     ts = datetime.datetime.now().strftime("%H:%M:%S")
     print(f"[{ts}] {msg}", flush=True)
@@ -79,8 +82,14 @@ def train(args):
     agent_sim = sim.initialize_agent(0)
 
     encoder = VisualEncoder(args.state_dim).to(device)
-    cvm_agent = CVMAgent(encoder=encoder, state_dim=args.state_dim,goal_dim=args.goal_dim,action_dim=3, device=device).to(device)
-    gear_agent = cvm_agent
+    cvm_agent = CVMAgent(
+        encoder=encoder, 
+        state_dim=args.state_dim,
+        action_dim=3, 
+        mixture_size=args.mixture_size,
+        device=device
+    ).to(device)
+    
     replay = CVMReplayBuffer(args.buffer_cap, args.t_max)
 
     global_step, returns = 0, []
@@ -97,63 +106,63 @@ def train(args):
         for t in range(args.max_steps):
             global_step += 1
 
-            # current obs
+            # Current observation
             rgb = bgr(sim.get_sensor_observations()["color_sensor"])
-            s = torch.from_numpy(rgb).float().permute(2, 0, 1).unsqueeze(0).to(device) / 255.
+            s_tensor = torch.from_numpy(rgb).float().permute(2, 0, 1).unsqueeze(0).to(device) / 255.
+            
             with torch.no_grad():
-                s_embed = encoder(s)
+                s_embed = encoder(s_tensor)
 
+            # Act
             action_idx = cvm_agent.act(s_embed) 
             action_str = ACTION_MAP[action_idx]
             sim.step(action_str)
 
-            # next obs
+            # Next observation
             n_rgb = bgr(sim.get_sensor_observations()["color_sensor"])
+            ns_tensor = torch.from_numpy(n_rgb).float().permute(2, 0, 1).unsqueeze(0).to(device) / 255.
             
-            # CVM Bonus Calculation
-            ns = torch.from_numpy(n_rgb).float().permute(2, 0, 1).unsqueeze(0).to(device) / 255.
             with torch.no_grad():
-                ns_embed = encoder(ns)
-                # Compute displacement
+                ns_embed = encoder(ns_tensor)
+                # Compute displacement delta_phi
                 delta_phi = ns_embed - s_embed
-                
-                # Compute bonus
+                # Compute CVM bonus: log(1 + delta_phi^T * Sigma^-1 * delta_phi) [cite: 54, 145]
                 bonus = cvm_agent.cvm.get_bonus(delta_phi).item()
-                
-                # Update CVM estimator
+                # Update covariance estimate Sigma [cite: 145, 2170]
                 cvm_agent.cvm.update(delta_phi)
 
+            # External Reward
             dist = euclid(agent_sim.get_state().position, goal)
-            reward, done = -dist, False
+            ext_reward = -dist
             
-            # Add intrinsic bonus
-            reward += args.cvm_coef * bonus
+            # Combine external reward and intrinsic CVM bonus [cite: 54, 2172]
+            total_reward = ext_reward + (args.cvm_coef * bonus)
             
+            done = False
             if dist < args.goal_thresh:
-                reward += 100.0
+                total_reward += 100.0
                 done, success = True, True
             if t == args.max_steps - 1:
-                reward -= 50.0
+                total_reward -= 50.0
                 done = True
 
-            ep_ret += reward
-            replay.push((rgb, np.array([action_idx]), reward, n_rgb, float(done)))
+            ep_ret += total_reward
+            replay.push((rgb, np.array([action_idx]), total_reward, n_rgb, float(done)))
 
             if done:
                 replay.finish_episode(success)
                 break
 
-            # periodic updates
+            # Periodic updates
             if global_step % args.update_freq == 0 and len(replay) >= args.warmup:
                 rl_batch = replay.sample_rl(args.batch)
-                gear_agent.update_rl(rl_batch, encoder, alpha=args.alpha)
-                gear_agent.update_generators(replay, encoder,
-                                             args.K_pos, args.K_neg)
+                # update_rl now handles policy mixture and behavioral metric [cite: 53, 2191]
+                cvm_agent.update_rl(rl_batch, encoder, alpha=args.alpha)
 
         returns.append(ep_ret)
         if ep % args.log_every == 0:
             log(f"Ep {ep:4d} | Ret {ep_ret:7.1f} | Avg "
-                f"{np.mean(returns[-args.log_every:]):7.1f} | Succ {success}")
+                f"{np.mean(returns[-args.log_every:]):7.1f} | Succ {success} | Bonus {bonus:.4f}")
 
         # checkpoint
         if ep % args.ckpt_every == 0 and ep > 0:
@@ -165,17 +174,15 @@ def train(args):
             }, os.path.join(args.save_dir, f"ckpt_{ep}.pt"))
 
     sim.close()
-    cv2.destroyAllWindows()
 
 def get_args():
     p = argparse.ArgumentParser()
     p.add_argument("--scene", required=True, help="Path to HM3D .glb")
-    p.add_argument("--save_dir", default="runs/gear")
+    p.add_argument("--save_dir", default="runs/cvm")
     p.add_argument("--episodes", type=int, default=1000)
     p.add_argument("--max_steps", type=int, default=200)
     p.add_argument("--goal_thresh", type=float, default=0.5)
     p.add_argument("--state_dim", type=int, default=256)
-    p.add_argument("--goal_dim", type=int, default=256)
     p.add_argument("--buffer_cap", type=int, default=100_000)
     p.add_argument("--t_max", type=int, default=50)
     p.add_argument("--update_freq", type=int, default=20)
@@ -185,9 +192,11 @@ def get_args():
     p.add_argument("--ckpt_every", type=int, default=100)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--alpha", type=float, default=0.2, help="Entropy temperature for SAC style updates")
+    # CVM Specific hyperparameters [cite: 193]
+    p.add_argument("--cvm_coef", type=float, default=0.1, help="Exploration bonus weight")
+    p.add_argument("--mixture_size", type=int, default=5, help="Number of policy snapshots for mixture")
     
     return p.parse_args()
-
 
 if __name__ == "__main__":
     train(get_args())
