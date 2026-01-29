@@ -15,18 +15,17 @@ Efficient exploration remains a key challenge in deep reinforcement learning, es
 
 ### Visualization Results
 
-<div align="center">
+### Demos in Go2 Environment
 
-| Demos in Go2 Environment |
-|-----|------------|------------|
-| ![Performance 1](./figs/real_world_easy.gif) | ![Performance 2](./figs/real_world_medium.gif)|![Performance 3](./figs/real_world_hard.gif)|
+| Easy | Medium | Hard |
+| :---: | :---: | :---: |
+| ![Performance 1](./figs/real_world_easy.gif) | ![Performance 2](./figs/real_world_medium.gif) | ![Performance 3](./figs/real_world_hard.gif) |
 
-| Demos on Robotic |
-|-----|------------|------------|
-|![CVM Performance 1](./figs/1.gif) | ![CVM Performance 2](./figs/2.gif)|![CVM Performance 3](./figs/3.gif)|
+### Demos on Robotic
 
-
-</div>
+| Performance 1 | Performance 2 | Performance 3 |
+| :---: | :---: | :---: |
+| ![CVM Performance 1](./figs/1.gif) | ![CVM Performance 2](./figs/2.gif) | ![CVM Performance 3](./figs/3.gif) |
 
 
 We evaluate CVM across realistic embodied environments, specifically assessing exploration efficiency, robustness, and scalability in navigation tasks.
