@@ -95,7 +95,7 @@ If you find our work useful, please cite:
 @inproceedings{anonymous2026cvm,
   title={Covariance Volume Maximization for Embodied Latent Exploration in Deep Reinforcement Learning},
   author={Anonymous},
-  booktitle={Proceedings of the Conference},
+  booktitle={Proceedings of the Anonymous Conference},
   year={2026}
 }
 ```
