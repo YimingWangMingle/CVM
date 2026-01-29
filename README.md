@@ -1,10 +1,5 @@
 # CVM: Covariance Volume Maximization for Embodied Latent Exploration in Deep Reinforcement Learning
 
-**Repository for the Submission paper**  
-**“Covariance Volume Maximization for Embodied Latent Exploration in Deep Reinforcement Learning”**
-
----
-
 ## Overview
 
 Efficient exploration remains a key challenge in deep reinforcement learning, especially for embodied agents operating in realistic environments with high-dimensional observations and complex dynamics.
@@ -20,16 +15,18 @@ Efficient exploration remains a key challenge in deep reinforcement learning, es
 
 ### Visualization Results
 
-#### Demos in Go2 Environment
+<div align="center">
 
-![Performance 1](./figs/real_world_easy.gif)
-![Performance 2](./figs/real_world_medium.gif)
-![Performance 3](./figs/real_world_hard.gif)
+| Demos in Go2 Environment |
+|-----|------------|------------|
+| ![Performance 1](./figs/real_world_easy.gif) | ![Performance 2](./figs/real_world_medium.gif)|![Performance 3](./figs/real_world_hard.gif)|
 
-#### Demos on Robotic
-![CVM Performance 1](./figs/1.gif)
-![CVM Performance 2](./figs/2.gif)
-![CVM Performance 3](./figs/3.gif)
+| Demos on Robotic |
+|-----|------------|------------|
+|![CVM Performance 1](./figs/1.gif) | ![CVM Performance 2](./figs/2.gif)|![CVM Performance 3](./figs/3.gif)|
+
+
+</div>
 
 
 We evaluate CVM across realistic embodied environments, specifically assessing exploration efficiency, robustness, and scalability in navigation tasks.
